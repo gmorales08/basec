@@ -6,7 +6,7 @@
 
 int main(int argc, char *argv[]) {
     char *value;
-    char base;     /* Base of the argument (d, b, o, x, a)*/
+    char base;     /* Base of the argument (d, b, o, h, a)*/
     struct values *values;
 
     if (argc < 2 || argc > 3) {
@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
     } else if (argc == 3){
         value = argv[2];
         base  = argv[1][1];
-        if (base == 'd' || base == 'b' || base == 'o' || base == 'x' ||
+        if (base == 'd' || base == 'b' || base == 'o' || base == 'h' ||
             base == 'a') {
             values = convertValue(value, base);
             if (values) {
@@ -49,7 +49,7 @@ void showUsage() {
         printf("  -d       for decimal\n");
         printf("  -b       for binary\n");
         printf("  -o       for octal\n");
-        printf("  -x       for hexadecimal\n");
+        printf("  -h       for hexadecimal\n");
         printf("  -a       for ascii\n");
         printf("\n");
         printf("  --usage  (show this page)\n");
@@ -60,7 +60,7 @@ void showUsage() {
         printf("  basec -d 100\n");
         printf("  basec -b 10001000\n");
         printf("  basec -o 644\n");
-        printf("  basec -x 106FA00B\n");
+        printf("  basec -h 106FA00B\n");
         printf("  basec -a text\n");
 }
 
@@ -112,11 +112,19 @@ int toDecimal(char *value, char base, long int *returnValue) {
             *returnValue = (int) value[0];
     }
 
-    if (value == endptr) {
+    if (base == 'a') {
+        if (strlen(value) > 1) {
+            printf("Error: Ascii value must be a single character.\n");
+            return -1;
+        } else {
+            return 0;
+        }
+    } else if (*endptr == '\0') {
+        /* Correct conversion */
+        return 0;
+    } else {
         printf("Error: Cannot convert %s from %c base.\n", value, base);
         return -1;
-    } else {
-        return 0;
     }
 }
 
