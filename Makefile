@@ -1,53 +1,107 @@
-PROGRAM      := basec
-PROGRAM_ARGS := -d 128
+PROGRAM = basec
 
-CC           := gcc
-CCFLAGS      := -Wall -Wextra -pedantic -std=c90
+CC             = gcc
+CFLAGS         = -Wall -Wextra -pedantic -std=c89
+DEBUG_CFLAGS   = -g3
+RELEASE_CFLAGS = -O3 -DNDEBUG
 
-DEBUG        := gdb
-DEBUG_FLAGS  := -tui --args
+LD              = gcc
+LDFLAGS         =
+DEBUG_LDFLAGS   =
+RELEASE_LDFLAGS = -s
+
+DEBUGGER       = gdb
+DEBUGGER_FLAGS =
+
+SRCDIR      = .
+OBJDIR      = obj
+BINDIR      = bin
+INSTALL_DIR = /usr/local/bin
+BUILD_DIRS  = $(OBJDIR) $(BINDIR)
+
+SRCS      = $(wildcard $(SRCDIR)/*.c)
+OBJS      = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SRCS))
 
 
-.PHONY: clean install uninstall info
+all: elf
+# Elf build
+elf: $(BUILD_DIRS)
+elf: $(BINDIR)/$(PROGRAM)
+# Debug build (do clean before)
+debug_elf: CFLAGS  += $(DEBUG_CFLAGS)
+debug_elf: LDFLAGS += $(DEBUG_LDFLAGS)
+debug_elf: $(BUILD_DIRS)
+debug_elf: $(BINDIR)/$(PROGRAM)
+# Release build (do clean before)
+release: CFLAGS     += $(RELEASE_CFLAGS)
+release: LDFLAGS    += $(RELEASE_LDFLAGS)
+release: $(BUILD_DIRS)
+release: $(BINDIR)/$(PROGRAM)
 
-all : elf
 
-elf : $(PROGRAM).c
-	$(CC) $(CCFLAGS) $(PROGRAM).c -o $(PROGRAM)
+$(BINDIR)/$(PROGRAM): $(OBJS)
+	$(LD) $(LDFLAGS) $^ -o $@
 
-elf_debug : $(PROGRAM).c
-	$(CC) $(CCFLAGS) -g $(PROGRAM).c -o $(PROGRAM)
+$(OBJDIR)/%.o: $(SRCDIR)/%.c
+	$(CC) $(CFLAGS) -c $^ -o $@
 
-debug : elf_debug
-	$(DEBUG) $(DEBUG_FLAGS) $(PROGRAM) $(PROGRAM_ARGS)
+$(BUILD_DIRS):
+	mkdir -p $@
 
-valgrind : elf_debug
+.PHONY: clean
+clean:
+	rm -rf $(OBJDIR)
+	rm -rf $(BINDIR)
+	rm -rf $(TEST_BINDIR)
+
+.PHONY: install
+install:
+	mkdir -p $(INSTALL_DIR)
+	mv $(BINDIR)/$(PROGRAM) $(INSTALL_DIR)
+
+.PHONY: uninstall
+uninstall:
+	rm -rf $(INSTALL_DIR)/$(PROGRAM)
+
+debug: debug_elf
+	$(DEBUGGER) $(DEBUGGER_FLAGS) $(BINDIR)/$(PROGRAM)
+
+valgrind: debug_elf
 	valgrind --leak-check=full \
 		 --show-leak-kinds=all \
 		 --track-origins=yes \
 		 --verbose \
-		 ./$(PROGRAM) $(PROGRAM_ARGS)
+		 ./$(BINDIR)/$(PROGRAM)
 
-clean :
-	rm -f $(PROGRAM)
-
-install : elf
-	mkdir -p /usr/local/bin
-	mv $(PROGRAM) /usr/local/bin
-
-uninstall :
-	rm -f /usr/local/bin/$(PROGRAM)
-
+.PHONY: info
 info :
-	@echo 'Tools:'
-	@echo '  Compiler: ' $(CC)
-	@echo '  Debugger: ' $(DEBUG)
 	@echo 'Rules:'
 	@echo '  all       : elf'
-	@echo '  elf       : build the elf file'
+	@echo '  elf       : make an elf file'
+	@echo '  debug_elf : make an elf with debug info'
+	@echo '  release   : make an optimal elf build'
+	@echo '  clean     : removes the program and the objects'
+	@echo '  install   : install the program (sudo required)'
+	@echo '  uninstall : uninstall the program (sudo required)'
 	@echo '  debug     : run the debugger with the program'
 	@echo '  valgrind  : run valgrind with the program'
-	@echo '  clean     : removes the compiled program'
-	@echo '  install   : install the program in the system'
-	@echo '  uninstall : uninstall the program'
 	@echo '  info      : show this page'
+	@echo 'Tools:'
+	@echo '  Compiler        :' $(CC)
+	@echo '    Compile flags :' $(CFLAGS)
+	@echo '    Debug flags   :' $(DEBUG_CFLAGS)
+	@echo '    Release flags :' $(RELEASE_CFLAGS)
+	@echo '  Linker          :' $(LD)
+	@echo '    Link flags    :' $(LDFLAGS)
+	@echo '    Debug flags   :' $(DEBUG_LDFLAGS)
+	@echo '    Release flags :' $(RELEASE_LDFLAGS)
+	@echo '  Debugger :' $(DEBUGGER)
+	@echo '    Flags  :' $(DEBUGGER_FLAGS)
+	@echo 'Paths:'
+	@echo '  Source       :' $(SRCDIR)
+	@echo '  Objects      :' $(OBJDIR)
+	@echo '  Binary       :' $(BINDIR)
+	@echo '  Installation :' $(INSTALL_DIR)
+	@echo 'Files:'
+	@echo '  Source files:' $(SRCS)
+	@echo '  Object files:' $(OBJS)

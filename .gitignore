@@ -54,3 +54,6 @@ dkms.conf
 
 # gmorales08
 todo
+obj/
+bin/
+test/
