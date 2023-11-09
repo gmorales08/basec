@@ -56,4 +56,5 @@ dkms.conf
 todo
 obj/
 bin/
-test/
+test/bin
+core

@@ -4,6 +4,7 @@
 #include "basec.h"
 
 
+#ifndef TEST
 int main(int argc, char *argv[]) {
     char *value;
     char base;     /* Base of the argument (d, b, o, h, a)*/
@@ -39,6 +40,7 @@ int main(int argc, char *argv[]) {
 
     return 0;
 }
+#endif /* TEST */
 
 void showUsage() {
         printf("USAGE:\n");

@@ -16,13 +16,18 @@ DEBUGGER_FLAGS =
 SRCDIR      = .
 OBJDIR      = obj
 BINDIR      = bin
+TEST_SRCDIR = test
+TEST_BINDIR = $(TEST_SRCDIR)/bin
 INSTALL_DIR = /usr/local/bin
 BUILD_DIRS  = $(OBJDIR) $(BINDIR)
 
 SRCS      = $(wildcard $(SRCDIR)/*.c)
 OBJS      = $(patsubst $(SRCDIR)/%.c, $(OBJDIR)/%.o, $(SRCS))
+TEST_SRCS = $(wildcard $(TEST_SRCDIR)/*.c)
+TEST_BINS = $(patsubst $(TEST_SRCDIR)/%.c, $(TEST_BINDIR)/%, $(TEST_SRCS))
 
 
+.PHONY: all elf debug_elf release test_build
 all: elf
 # Elf build
 elf: $(BUILD_DIRS)
@@ -37,6 +42,11 @@ release: CFLAGS     += $(RELEASE_CFLAGS)
 release: LDFLAGS    += $(RELEASE_LDFLAGS)
 release: $(BUILD_DIRS)
 release: $(BINDIR)/$(PROGRAM)
+# Test build
+test_build: CFLAGS  += $(DEBUG_CFLAGS)
+test_build: LDFLAGS += $(DEBUG_LDFLAGS)
+test_build: $(TEST_BINDIR)
+test_build: $(TEST_BINS)
 
 
 $(BINDIR)/$(PROGRAM): $(OBJS)
@@ -63,15 +73,28 @@ install:
 uninstall:
 	rm -rf $(INSTALL_DIR)/$(PROGRAM)
 
+.PHONY: debug
 debug: debug_elf
 	$(DEBUGGER) $(DEBUGGER_FLAGS) $(BINDIR)/$(PROGRAM)
 
+.PHONY: valgrind
 valgrind: debug_elf
 	valgrind --leak-check=full \
 		 --show-leak-kinds=all \
 		 --track-origins=yes \
 		 --verbose \
 		 ./$(BINDIR)/$(PROGRAM)
+
+.PHONY: test
+test: test_build
+	for test in $(TEST_BINS) ; do ./$$test ; done
+
+$(TEST_BINDIR):
+	mkdir -p $(TEST_BINDIR)
+
+$(TEST_BINDIR)/%: $(TEST_SRCDIR)/%.c
+	$(CC) $(CFLAGS) $< -o $@
+
 
 .PHONY: info
 info :
@@ -85,6 +108,7 @@ info :
 	@echo '  uninstall : uninstall the program (sudo required)'
 	@echo '  debug     : run the debugger with the program'
 	@echo '  valgrind  : run valgrind with the program'
+	@echo '  test      : compile and run all tests in test dir'
 	@echo '  info      : show this page'
 	@echo 'Tools:'
 	@echo '  Compiler        :' $(CC)
@@ -105,3 +129,5 @@ info :
 	@echo 'Files:'
 	@echo '  Source files:' $(SRCS)
 	@echo '  Object files:' $(OBJS)
+	@echo '  Test source files:' $(TEST_SRCS)
+	@echo '  Test binary files:' $(TEST_BINS)
